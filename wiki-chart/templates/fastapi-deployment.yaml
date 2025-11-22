@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi
+spec:
+  replicas: {{ .Values.fastapi.replicas }}
+  selector:
+    matchLabels:
+      app: fastapi
+  template:
+    metadata:
+      labels:
+        app: fastapi
+    spec:
+      containers:
+      - name: fastapi
+        image: {{ .Values.fastapi.image_name }}
+        imagePullPolicy: Never
+        env:
+        - name: DATABASE_URL
+          value: "postgresql+asyncpg://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@postgres-service:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
+        ports:
+        - containerPort: {{ .Values.fastapi.port }}
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

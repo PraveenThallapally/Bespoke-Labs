@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wiki-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /users(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: fastapi-service
+            port:
+              number: {{ .Values.fastapi.port }}
+      - path: /posts(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: fastapi-service
+            port:
+              number: {{ .Values.fastapi.port }}
+      - path: /user(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: fastapi-service
+            port:
+              number: {{ .Values.fastapi.port }}
+      - path: /metrics(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: fastapi-service
+            port:
+              number: {{ .Values.fastapi.port }}
+      - path: /grafana(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: grafana-service
+            port:
+              number: {{ .Values.grafana.port }}

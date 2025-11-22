@@ -1,0 +1,18 @@
+fastapi:
+  image_name: wiki-fastapi:v1
+  replicas: 1
+  port: 8000
+
+postgres:
+  user: wikiuser
+  password: wikipass
+  database: wikidb
+  port: 5432
+
+prometheus:
+  port: 9090
+
+grafana:
+  adminUser: admin
+  adminPassword: admin
+  port: 3000
