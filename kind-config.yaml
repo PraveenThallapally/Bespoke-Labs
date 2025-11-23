@@ -13,3 +13,5 @@ nodes:
   - containerPort: 30082
     hostPort: 30082
     protocol: TCP
+
+#kind create cluster --config kind-config.yaml
