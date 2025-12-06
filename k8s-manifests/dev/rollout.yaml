@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: myapp
+  namespace: dev
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  
+  selector:
+    matchLabels:
+      app: myapp
+      environment: dev
+  
+  template:
+    metadata:
+      labels:
+        app: myapp
+        environment: dev
+    spec:
+      containers:
+      - name: myapp
+        image: nginx:1.19.0
+        ports:
+        - containerPort: 80
+        env:
+        - name: ENV
+          value: "development"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+  
+  strategy:
+    canary:
+      canaryService: myapp-canary
+      stableService: myapp-stable
+      trafficRouting:
+        istio:
+          virtualService:
+            name: myapp-vsvc
+            routes:
+            - primary
+      
+      steps:
+      - setWeight: 50
+      - pause: {duration: 30s}
+      
+      - analysis:
+          templates:
+          - templateName: myapp-analysis
+      
+      - setWeight: 100
