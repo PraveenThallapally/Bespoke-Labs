@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -e  # Exit on any error
 
 # Colors for output
@@ -51,14 +50,13 @@ fi
 
 # Step 1: Install KIND
 print_status "Installing KIND..."
-if ! command -v kind &> /dev/null; then
-    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
-    chmod +x ./kind
-    sudo mv ./kind /usr/local/bin/kind
-    print_success "KIND installed: $(kind version)"
-else
-    print_success "KIND already installed: $(kind version)"
-fi
+# Remove old KIND if exists (in case it's corrupt)
+sudo rm -f /usr/local/bin/kind
+print_status "Downloading KIND from GitHub..."
+curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/v0.20.0/kind-linux-amd64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind
+print_success "KIND installed: $(kind version)"
 
 # Step 2: Create KIND cluster
 print_status "Creating KIND cluster..."
@@ -112,7 +110,6 @@ export PATH=$PWD/bin:$PATH
 istioctl install --set profile=demo -y
 
 cd ..
-
 print_success "Istio installed"
 
 # Wait for Istio to be ready
@@ -122,10 +119,8 @@ print_success "Istio is ready"
 
 # Step 4: Install Argo Rollouts
 print_status "Installing Argo Rollouts..."
-
 kubectl create namespace argo-rollouts --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
-
 print_success "Argo Rollouts installed"
 
 # Wait for Argo Rollouts to be ready
@@ -146,25 +141,19 @@ fi
 
 # Step 5: Install Prometheus
 print_status "Installing Prometheus..."
-
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-
 kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-
 helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
   --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
   --wait --timeout 10m
-
 print_success "Prometheus installed"
 
 # Step 6: Install ArgoCD
 print_status "Installing ArgoCD..."
-
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-
 print_success "ArgoCD installed"
 
 # Wait for ArgoCD to be ready
@@ -183,6 +172,19 @@ else
     print_success "ArgoCD CLI already installed"
 fi
 
+# Step 7: Install NGINX Ingress Controller
+print_status "Installing NGINX Ingress Controller..."
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+print_success "NGINX Ingress Controller installed"
+
+# Wait for NGINX Ingress to be ready
+print_status "Waiting for NGINX Ingress to be ready..."
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=300s
+print_success "NGINX Ingress is ready"
+
 # Final verification
 echo ""
 echo -e "${GREEN}========================================${NC}"
@@ -194,7 +196,7 @@ print_status "Cluster Summary:"
 echo ""
 
 print_status "Namespaces:"
-kubectl get namespaces | grep -E "istio-system|argo-rollouts|monitoring|argocd"
+kubectl get namespaces | grep -E "istio-system|argo-rollouts|monitoring|argocd|ingress-nginx"
 echo ""
 
 print_status "Pods in istio-system:"
@@ -211,6 +213,10 @@ echo ""
 
 print_status "Pods in argocd:"
 kubectl get pods -n argocd
+echo ""
+
+print_status "Pods in ingress-nginx:"
+kubectl get pods -n ingress-nginx
 echo ""
 
 # Get ArgoCD initial password
